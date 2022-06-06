@@ -4,8 +4,6 @@ kind_name ?= kind
 
 
 prepare:
-	echo $(SA)
-	echo $(IMAGE)
 	docker build -t $(IMAGE) .
 	kind load docker-image $(IMAGE) --name $(kind_name)
 

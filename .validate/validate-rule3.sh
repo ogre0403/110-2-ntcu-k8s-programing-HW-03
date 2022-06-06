@@ -1,29 +1,38 @@
 #!/bin/bash
 
 echo ""
-echo "測試Client Deployment週期讀取Web Deployment 名字至少四次"
-LABEL="ntcu-k8s=hw2"
+echo "驗證Informer 是否會自動建立Service，並測試是否連連通"
 
 
-sa=`for f in ./manifest/*; do cat ${f} | yq '(.|select(.kind == "ServiceAccount")).metadata.name' ; done`
+LABEL="ntcu-k8s=hw3"
+
+# informer 會建立一個svc
+svc_num=`kubectl get svc   -l ${LABEL}  -o yaml | yq '.items | length'`
+
+if [[ "$svc_num" -ne 1 ]]; then
+    echo "informer建立的svc數量 $svc_num 不正確. 應為 1"
+    exit 1
+fi
+
+cid=`docker ps -f name=control-plane -q`
 
 
-deploy_name=`kubectl get deployments.apps -l ${LABEL} -o yaml | yq '.items[0].metadata.name'`
-
-client_pod=`kubectl get pod -o yaml | yq "(.items[]|select(.spec.serviceAccountName == \"${sa}\")).metadata.name"`
-
-
-
+nodeport=`kubectl get svc  -l ${LABEL}  -o jsonpath='{.items[0].spec.ports[0].nodePort}'`
 
 for i in {1..20}; do
-  occur_count=`kubectl logs ${client_pod} | grep -o ${deploy_name} -c`
-  if [[ "$occur_count" -ge 4 ]]; then
-      echo "........ PASS"
-      exit 0
+
+  docker exec ${cid} curl 127.0.0.1:${nodeport}  >/dev/null  2>&1
+
+  RET=$?
+
+  if [[ ${RET} -eq 0 ]]; then
+    echo "........ PASS"
+    exit 0
   fi
+
   sleep 3
 done
 
-
-echo "timeout. 經過 60 秒，${deploy_name} 出現少於4次"
+echo "timeout for wait for connect deployment"
 exit 1
+

@@ -5,7 +5,7 @@ sa=`for f in ./manifest/*; do cat ${f} | yq '(.|select(.kind == "ServiceAccount"
 deployment=`for f in ./manifest/*; do cat ${f} | yq "(.|select(.spec.template.spec.serviceAccountName == \"${sa}\")).metadata.name" ; done`
 
 echo ""
-echo "等待Client Pod部署完成"
+echo "Informer Deployment部署完成"
 
 ready="false"
 

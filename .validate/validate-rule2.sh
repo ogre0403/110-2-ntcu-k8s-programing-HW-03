@@ -1,58 +1,60 @@
 #!/bin/bash
 
 echo ""
-echo "驗證Client Deployment 是否有建立web service，並測試是否連連通"
+echo "驗證初始無Service"
 
-LABEL="ntcu-k8s=hw2"
 
+# 初始應無svc
+LABEL="ntcu-k8s=hw3"
 svc_num=`kubectl get svc   -l ${LABEL}  -o yaml | yq '.items | length'`
 
 
-if [[ "$svc_num" -ne 1 ]]; then
-    echo "client建立的svc數量 $svc_num 不正確"
+if [[ "$svc_num" -ne 0 ]]; then
+    echo "informer建立的svc數量 $svc_num 不正確. 應為 0"
     exit 1
 fi
 
-deployment_num=`kubectl get deployment -l ${LABEL}  -o yaml | yq '.items | length'`
-if [[ "$deployment_num" -ne 1 ]]; then
-    echo "client建立的deployment 數量 $deployment_num 不正確"
-    exit 1
-fi
+# 建立隨機nginx deployment
+deployment=nginx-deployment
+random=`echo ${RANDOM}`
 
-# find out nginx deployment name
-deployment=`kubectl get deployment -l ${LABEL}  -o yaml | yq '.items[0].metadata.name'`
+cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${deployment}
+  labels:
+    name: nginx
+    ntcu-k8s: hw3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: nginx-${random}
+  template:
+    metadata:
+      labels:
+        name: nginx-${random}
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.7.9
+          ports:
+            - containerPort: 80
+EOF
+
+# 等待nginx ready
 
 ready="false"
 for i in {1..60}; do
   ready=`kubectl get deployments.apps ${deployment} >/dev/null  2>&1  && kubectl get deployments.apps ${deployment} -o yaml |  yq .status.readyReplicas==.status.replicas`
 
 	if [ "$ready" == "true" ]; then
-		break
-	fi
-    echo "deployment ${deployment} not ready, sleep 1 sec"
-done
-
-
-
-cid=`docker ps -f name=control-plane -q`
-
-
-nodeport=`kubectl get svc  -l ntcu-k8s=hw2  -o jsonpath='{.items[0].spec.ports[0].nodePort}'`
-
-for i in {1..20}; do
-
-  docker exec ${cid} curl 127.0.0.1:${nodeport}  >/dev/null  2>&1
-
-  RET=$?
-
-  if [[ ${RET} -eq 0 ]]; then
-    echo "........ PASS"
+		echo "........ PASS"
     exit 0
-  fi
-
-  sleep 3
+	fi
+  sleep 2
 done
 
-echo "timeout for wait for connect deployment ${deployment} success"
+echo "timeout 120 sec. wait for create deployment ${deployment} success"
 exit 1
-

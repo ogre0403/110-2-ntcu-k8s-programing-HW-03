@@ -70,5 +70,17 @@ if [[ $cani == "no" ]]; then
     exit 1
 fi
 
+cani=`kubectl auth can-i list deployment --as system:serviceaccount:default:$sa`
+if [[ $cani == "no" ]]; then
+    echo "ServiceAccount $sa 無法 list deployment"
+    exit 1
+fi
+
+cani=`kubectl auth can-i watch deployment --as system:serviceaccount:default:$sa`
+if [[ $cani == "no" ]]; then
+    echo "ServiceAccount $sa 無法watch deployment"
+    exit 1
+fi
+
 
 echo "........ PASS"
