@@ -1,0 +1,30 @@
+name: validate
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+jobs:
+  validate-title:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: deepakputhraya/action-pr-title@master
+        with:
+          regex: "HW-03-[a-z]{3}[0-9]{6}" # Regex the title should match.
+  validate-deadline:
+    needs: validate-title
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: validate-deadline
+        run: bash .validate/validate-deadline.sh
+  vaildate-HW:
+    needs: validate-deadline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Create k8s Kind Cluster
+        uses: helm/kind-action@v1.2.0
+      - name: validate
+        run: make all kind_name=chart-testing -f .validate/Makefile

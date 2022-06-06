@@ -1,0 +1,16 @@
+name: Close PR on files which are not allowed to edit
+
+on:
+  pull_request_target:
+    types: [opened, reopened]
+    paths:
+      - ".validate/*"
+      - ".github/workflows/*"
+
+jobs:
+  close-pr:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: superbrothers/close-pull-request@v3
+        with:
+          comment: "請勿修改 '.validate/*' and '.github/workflows/' 目錄內的檔案."
