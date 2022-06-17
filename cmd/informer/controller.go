@@ -111,7 +111,7 @@ func int32Ptr(i int32) *int32 { return &i }
 func createDeployment(client kubernetes.Interface) *appv1.Deployment {
 	dm := &appv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "apple-app1",
+			Name: "orange-app1",
 			Labels: map[string]string{
 				"ntcu-k8s1": "hw3",
 			},
@@ -201,7 +201,7 @@ var portnum int32 = 80
 func createService(client kubernetes.Interface) *corev1.Service {
 	sm := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "apple-service",
+			Name: "orange-service",
 			Labels: map[string]string{
 				"ntcu-k8s": "hw3",
 			},
