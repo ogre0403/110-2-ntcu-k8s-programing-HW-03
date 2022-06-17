@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: apple-apps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app : apple-apps
+  template:
+    metadata:
+      labels:
+        app : apple-apps
+    spec:
+      serviceAccountName: dm-incluster
+      containers:
+        - name: apple-apps
+          image: kevin0413/incluster:latest
+          imagePullPolicy: IfNotPresent
