@@ -15,5 +15,5 @@ spec:
       serviceAccountName: dm-incluster
       containers:
         - name: apple-apps
-          image: kevin0413/incluster:latest
+          image: acs108102/incluster:latest
           imagePullPolicy: IfNotPresent

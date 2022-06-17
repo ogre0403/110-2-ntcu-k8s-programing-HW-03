@@ -33,6 +33,7 @@ var clientSet *kubernetes.Clientset
 
 //var aa *corev1.Service
 //var bb *appv1.Deployment
+//copyright@ntcu-acs108102
 
 // Run starts shared informers and waits for the shared informer cache to
 // synchronize.
