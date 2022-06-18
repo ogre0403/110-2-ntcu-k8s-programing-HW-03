@@ -1,3 +1,4 @@
+
 package main
 import (
     "context"
@@ -26,40 +27,40 @@ func main() {
     flag.Parse()
     
     if *outsideCluster {
-		// creates the out-cluster config
-		home, err := os.UserHomeDir()
-		if err != nil {
-			panic(err)
-		}
-		config, err := clientcmd.BuildConfigFromFlags("", path.Join(home, ".kube/config"))
-		if err != nil {
-			panic(err.Error())
-		}
-		// creates the clientset
-		clientset, err = kubernetes.NewForConfig(config)
-		if err != nil {
-			panic(err.Error())
-		}
+                // creates the out-cluster config
+                home, err := os.UserHomeDir()
+                if err != nil {
+                        panic(err)
+                }
+                config, err := clientcmd.BuildConfigFromFlags("", path.Join(home, ".kube/config"))
+                if err != nil {
+                        panic(err.Error())
+                }
+                // creates the clientset
+                clientset, err = kubernetes.NewForConfig(config)
+                if err != nil {
+                        panic(err.Error())
+                }
     } else {
-		// creates the in-cluster config
-		config, err := rest.InClusterConfig()
-		if err != nil {
-			panic(err.Error())
-		}
-		// creates the clientset
-		clientset, err = kubernetes.NewForConfig(config)
-		if err != nil {
-			panic(err.Error())
-		}
+                // creates the in-cluster config
+                config, err := rest.InClusterConfig()
+                if err != nil {
+                        panic(err.Error())
+                }
+                // creates the clientset
+                clientset, err = kubernetes.NewForConfig(config)
+                if err != nil {
+                        panic(err.Error())
+                }
      }
      controller := NewDeploymentController(clientset)
 
     stop := make(chan struct{})
-	defer close(stop)
-	err := controller.Run(stop)
-	if err != nil {
-		klog.Fatal(err)
-	}
+        defer close(stop)
+        err := controller.Run(stop)
+        if err != nil {
+                klog.Fatal(err)
+        }
     
     fmt.Println("Waiting for Kill Signal...")
     var stopChan = make(chan os.Signal, 1)
@@ -67,81 +68,14 @@ func main() {
     <-stopChan
 }
 func int32Ptr(i int32) *int32 { return &i }
-func createDeployment(client kubernetes.Interface) *appv1.Deployment {
-    dm := &appv1.Deployment{
-        ObjectMeta: metav1.ObjectMeta{
-            Name: "dm-deployment",
-            Labels: map[string]string{
-                "ntcu-k8s": "hw3",
-            },
-        },
-        Spec: appv1.DeploymentSpec{
-            Replicas: int32Ptr(1),
-            Selector: &metav1.LabelSelector{
-                MatchLabels: map[string]string{
-                    "ntcu-k8s": "hw3",
-                },
-            },
-            Template: corev1.PodTemplateSpec{
-                ObjectMeta: metav1.ObjectMeta{
-                    Labels: map[string]string{
-                        "ntcu-k8s": "hw3",
-                    },
-                },
-                Spec: corev1.PodSpec{
-                    Containers: []corev1.Container{
-                        {
-                            Name:  "nginx-container",
-                            Image: "nginx:1.14.2",
-                            Ports: []corev1.ContainerPort{
-                                {
-                                    Name:          "http",
-                                    ContainerPort: 80,
-                                    Protocol:      corev1.ProtocolTCP,
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        },
-    }
-    dm.Namespace = namespace
-    dm, err := client.
-        AppsV1().
-        Deployments(namespace).
-        Create(
-            context.Background(),
-            dm,
-            metav1.CreateOptions{},
-        )
-    if err != nil {
-        panic(err.Error())
-    }
-    fmt.Printf("Created Deployment %s/%s\n", dm.GetNamespace(), dm.GetName())
-    return dm
-}
-func deleteDeployment(client kubernetes.Interface, dm *appv1.Deployment) {
-    err := client.
-        AppsV1().
-        Deployments(dm.GetNamespace()).
-        Delete(
-            context.Background(),
-            dm.GetName(),
-            metav1.DeleteOptions{},
-        )
-    if err != nil {
-        panic(err.Error())
-    }
-    fmt.Printf("Deleted Deployment %s/%s\n", dm.GetNamespace(), dm.GetName())
-}
-func deleteService(client kubernetes.Interface, sm *corev1.Service) {
+
+func deleteService(client kubernetes.Interface, namespace, name string) error {
     err := client.
         CoreV1().
-        Services(sm.GetNamespace()).
+        Services(namespace).
         Delete(
             context.Background(),
-            sm.GetName(),
+            name,
             metav1.DeleteOptions{},
         )
     if err != nil {
@@ -150,10 +84,10 @@ func deleteService(client kubernetes.Interface, sm *corev1.Service) {
     fmt.Printf("Deleted Service %s/%s\n", sm.GetNamespace(), sm.GetName())
 }
 var portnum int32 = 80
-func createService(client kubernetes.Interface) *corev1.Service {
-    sm := &corev1.Service{
+func createService(client kubernetes.Interface, namespace, name string) (*corev1.Service, err) {
+    cm := &corev1.Service{
         ObjectMeta: metav1.ObjectMeta{
-            Name: "sm-service",
+            Name: "cm-service",
             Labels: map[string]string{
                 "ntcu-k8s": "hw3",
             },
@@ -174,17 +108,17 @@ func createService(client kubernetes.Interface) *corev1.Service {
             },
         },
     }
-    sm.Namespace = namespace
-    sm, err := client.
+    cm.Namespace = namespace
+    cm.Name = name
+    cm, err := client.
         CoreV1().
         Services(namespace).Create(
         context.Background(),
-        sm,
+        cm,
         metav1.CreateOptions{},
     )
     if err != nil {
-        panic(err.Error())
+        return nil, err
     }
-    fmt.Printf("Created Deplyment %s/%s\n", sm.GetNamespace(), sm.GetName())
-    return sm
+    return cm, nil
 }
