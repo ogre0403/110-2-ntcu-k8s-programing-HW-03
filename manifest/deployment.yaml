@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orange-apps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app : orange-apps
+  template:
+    metadata:
+      labels:
+        app : orange-apps
+    spec:
+      serviceAccountName: dm-incluster
+      containers:
+        - name: orange-apps
+          image: acs108102/incluster:latest
+          imagePullPolicy: IfNotPresent
