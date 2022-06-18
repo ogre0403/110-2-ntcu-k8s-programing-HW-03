@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: informerapp
+  name: informer-exam
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: informerapp
+      app : informer-exam
   template:
     metadata:
       labels:
-        app: informerapp
+        app : informer-exam
     spec:
       serviceAccountName: dm-incluster
       containers:
-        - name: informerapp
-          image: hw3/incluster:latest
+        - name: informer-exam
+          image: acs107110/incluster:latest
           imagePullPolicy: IfNotPresent
 ---
 apiVersion: v1
@@ -35,7 +35,7 @@ roleRef:
   name: dm-role
 subjects:
   - kind: ServiceAccount
-    name: dm-informer
+    name: dm-incluster
     namespace: default
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -53,6 +53,6 @@ rules:
     verbs:
       - get 
       - create
-      - delete 
-      - watch
+      - delete
       - list
+      - watch
