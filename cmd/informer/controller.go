@@ -41,7 +41,7 @@ func (c *DeploymentController) onUpdate(old, new interface{}) {
     job := old.(*appv1.Deployment)
     if job.GetLabels()["ntcu-k8s"] == "hw3" {
     fmt.Printf("Informer event: Job UPDATED %s/%s\n", job.GetNamespace(), job.GetName())
-        cm := createService(c.clientSet)
+        cm := createService(c.clientSet, namespace, "test-service")
         fmt.Printf("----Create Service when Job UPDATED Event %s/%s\n", cm.GetNamespace(), cm.GetName())
     }
 }
@@ -49,8 +49,8 @@ func (c *DeploymentController) onDelete(obj interface{}) {
     job := obj.(*appv1.Deployment)
     if job.GetLabels()["ntcu-k8s"] == "hw3" {
         fmt.Printf("Informer event: Job DELETED %s/%s\n", job.GetNamespace(), job.GetName())
-        if err := deleteService(c.clientSet, namespace, c.svc.GetName()); err == nil {
-            fmt.Printf("----Delete Service when Job DELETE Event %s/%s\n", c.svc.GetNamespace(), c.svc.GetName())
+        if err := deleteService(c.clientSet, namespace, "test-service"); err == nil {
+            fmt.Printf("----Delete Service when Job DELETE Event %s/%s\n", namespace, "test-service")
         }
     }
 }
