@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: orange-apps
+  name: apple-apps
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app : orange-apps
+      ntuc-k8s: hw3
   template:
     metadata:
       labels:
-        app : orange-apps
+        ntuc-k8s: hw3
     spec:
       serviceAccountName: dm-incluster
       containers:
-        - name: orange-apps
-          image: acs108102/incluster:latest
-          imagePullPolicy: IfNotPresent
+        - name: apple-apps
+          image: kevin0413/incluster:latest
+          imagePullPolicy: IfNotPresent           

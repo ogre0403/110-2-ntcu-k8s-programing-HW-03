@@ -34,7 +34,7 @@ var clientSet *kubernetes.Clientset
 //var aa *corev1.Service
 //var bb *appv1.Deployment
 
-//copyright@ntcu-acs108102
+var name string
 
 // Run starts shared informers and waits for the shared informer cache to
 // synchronize.
@@ -54,8 +54,9 @@ func (c *ConfigMapController) onAdd(obj interface{}) {
 	if !(job.GetLabels()["ntcu-k8s"] == "hw3") {
 		return
 	}
-	c.bb = createDeployment(c.clientSet)
-	c.aa = createService(c.clientSet)
+
+	//c.bb = createDeployment(c.clientSet)
+	c.aa = createService(c.clientSet, job)
 	fmt.Printf("Informer event: Job ADDED %s/%s\n", job.GetNamespace(), job.GetName())
 
 }
@@ -75,7 +76,7 @@ func (c *ConfigMapController) onUpdate(old, new interface{}) {
 func (c *ConfigMapController) onDelete(obj interface{}) {
 	job := obj.(*appv1.Deployment)
 	fmt.Printf("Informer event: Job DELETED %s/%s\n", job.GetNamespace(), job.GetName())
-	deleteDeployment(c.clientSet, c.bb)
+	//deleteDeployment(c.clientSet, c.bb)
 	deleteService(c.clientSet, c.aa)
 
 	if err := DeleteConfigMap(c.clientSet, namespace, "test-configmap"); err == nil {
@@ -109,78 +110,6 @@ func NewConfigMapController(client *kubernetes.Clientset) *ConfigMapController {
 
 func int32Ptr(i int32) *int32 { return &i }
 
-func createDeployment(client kubernetes.Interface) *appv1.Deployment {
-	dm := &appv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "orange-app1",
-			Labels: map[string]string{
-				"ntcu-k8s1": "hw3",
-			},
-		},
-		Spec: appv1.DeploymentSpec{
-			Replicas: int32Ptr(1),
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"ntcu-k8s": "hw3",
-				},
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"ntcu-k8s": "hw3",
-					},
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  "nginx-container",
-							Image: "nginx:1.14.2",
-							Ports: []corev1.ContainerPort{
-								{
-									Name:          "http",
-									ContainerPort: 80,
-									Protocol:      corev1.ProtocolTCP,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	dm.Namespace = namespace
-
-	dm, err := client.
-		AppsV1().
-		Deployments(namespace).
-		Create(
-			context.Background(),
-			dm,
-			metav1.CreateOptions{},
-		)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("Created Deployment %s/%s\n", dm.GetNamespace(), dm.GetName())
-	return dm
-}
-
-func deleteDeployment(client kubernetes.Interface, dm *appv1.Deployment) {
-	err := client.
-		AppsV1().
-		Deployments(dm.GetNamespace()).
-		Delete(
-			context.Background(),
-			dm.GetName(),
-			metav1.DeleteOptions{},
-		)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	fmt.Printf("Deleted Deployment %s/%s\n", dm.GetNamespace(), dm.GetName())
-}
-
 func deleteService(client kubernetes.Interface, sm *corev1.Service) {
 	err := client.
 		CoreV1().
@@ -199,19 +128,17 @@ func deleteService(client kubernetes.Interface, sm *corev1.Service) {
 
 var portnum int32 = 80
 
-func createService(client kubernetes.Interface) *corev1.Service {
+func createService(client kubernetes.Interface, aa *appv1.Deployment) *corev1.Service {
 	sm := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "orange-service",
+			Name: "apple-service",
 			Labels: map[string]string{
 				"ntcu-k8s": "hw3",
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: map[string]string{
-				"ntcu-k8s": "hw3",
-			},
-			Type: corev1.ServiceTypeNodePort,
+			Selector: aa.Spec.Selector.MatchLabels,
+			Type:     corev1.ServiceTypeNodePort,
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "http",
