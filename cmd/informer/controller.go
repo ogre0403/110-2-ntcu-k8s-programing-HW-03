@@ -78,7 +78,7 @@ func (c *DeploymentController) onDelete(obj interface{}) {
 }
 
 // NewConfigMapController creates a ConfigMapController
-func NDeploymentMapController(client *kubernetes.Clientset) *DeploymentController {
+func DeploymentController(client *kubernetes.Clientset) *DeploymentController {
 	factory := informers.NewSharedInformerFactoryWithOptions(client, 5*time.Second, informers.WithNamespace(namespace))
 	informer := factory.Apps().V1().Deployments()
 
