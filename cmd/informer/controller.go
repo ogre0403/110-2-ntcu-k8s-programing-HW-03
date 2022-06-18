@@ -5,26 +5,33 @@ import (
 	"fmt"
 	"time"
 
+	"os"
+	"path"
+
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/informers"
-	batchinformer "k8s.io/client-go/informers/apps/v1"
+	appsinformer "k8s.io/client-go/informers/apps/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 type DeploymentController struct {
 	informerFactory informers.SharedInformerFactory
-	informer        batchinformer.DeploymentInformer
+	informer        appsinformer.DeploymentInformer
 	clientSet       *kubernetes.Clientset
-	sc              *corev1.Service
-	deploy              *appv1.Deployment
+	aa              *corev1.Service
+	bb              *appv1.Deployment
 }
 
-// Run starts shared informers and waits for the shared informer cache to
-// synchronize.
+var clientSet *kubernetes.Clientset
+
+
 func (c *DeploymentController) Run(stopCh chan struct{}) error {
 	// Starts all the shared informers that have been created by the factory so
 	// far.
@@ -37,31 +44,41 @@ func (c *DeploymentController) Run(stopCh chan struct{}) error {
 }
 
 func (c *DeploymentController) onAdd(obj interface{}) {
-	j := obj.(*appv1.Deployment)
-	if !(j.GetLabels()["ntcu-k8s"] == "hw3") {
+	job := obj.(*appv1.Deployment)
+	if !(job.GetLabels()["ntcu-k8s"] == "hw3") {
 		return
 	}
-	c.deploy = createDeployment(c.clientSet)
-	c.sc = createService(c.clientSet)
-	fmt.Printf("Informer event: Deployment ADDED %s/%s\n", j.GetNamespace(), j.GetName())
+	c.bb = createDeployment(c.clientSet)
+	c.aa = createService(c.clientSet)
+	fmt.Printf("Informer event: Job ADDED %s/%s\n", job.GetNamespace(), job.GetName())
+
 }
 
 func (c *DeploymentController) onUpdate(old, new interface{}) {
-	j := old.(*appv1.Deployment)
-	fmt.Printf("Informer event: Deployment UPDATED %s/%s\n", j.GetNamespace(), j.GetName())
+	job := old.(*appv1.Deployment)
+	fmt.Printf("Informer event: Job UPDATED %s/%s\n", job.GetNamespace(), job.GetName())
+
+	_, err := GetConfigMap(c.clientSet, namespace, "test-configmap")
+	if err != nil && errors.IsNotFound(err) {
+		cm, _ := CreateConfigMap(c.clientSet, namespace, "test-configmap")
+		fmt.Printf("----Create ConfigMap when Job UPDATED Event %s/%s\n", cm.GetNamespace(), cm.GetName())
+	}
 
 }
 
 func (c *DeploymentController) onDelete(obj interface{}) {
-	j := obj.(*appv1.Deployment)
-	fmt.Printf("Informer event: Deployment DELETED %s/%s\n", j.GetNamespace(), j.GetName())
-	deleteDeployment(c.clientSet, c.deploy)
-	deleteService(c.clientSet, c.sc)
-	
+	job := obj.(*appv1.Deployment)
+	fmt.Printf("Informer event: Job DELETED %s/%s\n", job.GetNamespace(), job.GetName())
+	deleteDeployment(c.clientSet, c.bb)
+	deleteService(c.clientSet, c.aa)
+
+	if err := DeleteConfigMap(c.clientSet, namespace, "test-configmap"); err == nil {
+		fmt.Printf("----Delete ConfigMap when Job DELETE Event %s/%s\n", namespace, "test-configmap")
+	}
 }
 
 // NewConfigMapController creates a ConfigMapController
-func NewDeploymentController(client *kubernetes.Clientset) *DeploymentController {
+func NDeploymentMapController(client *kubernetes.Clientset) *DeploymentController {
 	factory := informers.NewSharedInformerFactoryWithOptions(client, 5*time.Second, informers.WithNamespace(namespace))
 	informer := factory.Apps().V1().Deployments()
 
@@ -84,69 +101,12 @@ func NewDeploymentController(client *kubernetes.Clientset) *DeploymentController
 	return c
 }
 
-var portnum int32 = 80
-
 func int32Ptr(i int32) *int32 { return &i }
-
-func createService(client kubernetes.Interface) *corev1.Service {
-	sm := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "cservice",
-			Labels: map[string]string{
-				"ntcu-k8s": "hw3",
-			},
-		},
-		Spec: corev1.ServiceSpec{
-			Selector: map[string]string{
-				"ntcu-k8s": "hw3",
-			},
-			Type: corev1.ServiceTypeNodePort,
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "http",
-					Port:       80,
-					TargetPort: intstr.IntOrString{IntVal: portnum},
-					NodePort:   30030,
-					Protocol:   corev1.ProtocolTCP,
-				},
-			},
-		},
-	}
-	sm.Namespace = namespace
-	sm, err := client.
-		CoreV1().
-		Services(namespace).Create(
-		context.Background(),
-		sm,
-		metav1.CreateOptions{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("Created Deplyment %s/%s\n", sm.GetNamespace(), sm.GetName())
-	return sm
-}
-
-func deleteService(client kubernetes.Interface, sm *corev1.Service) {
-	err := client.
-		CoreV1().
-		Services(sm.GetNamespace()).
-		Delete(
-			context.Background(),
-			sm.GetName(),
-			metav1.DeleteOptions{},
-		)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	fmt.Printf("Deleted Service %s/%s\n", sm.GetNamespace(), sm.GetName())
-}
 
 func createDeployment(client kubernetes.Interface) *appv1.Deployment {
 	dm := &appv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "createdeploy",
+			Name: "deploy",
 			Labels: map[string]string{
 				"ntcu-k8s": "hw3",
 			},
@@ -213,4 +173,111 @@ func deleteDeployment(client kubernetes.Interface, dm *appv1.Deployment) {
 	}
 
 	fmt.Printf("Deleted Deployment %s/%s\n", dm.GetNamespace(), dm.GetName())
+}
+
+func deleteService(client kubernetes.Interface, sm *corev1.Service) {
+	err := client.
+		CoreV1().
+		Services(sm.GetNamespace()).
+		Delete(
+			context.Background(),
+			sm.GetName(),
+			metav1.DeleteOptions{},
+		)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	fmt.Printf("Deleted Service %s/%s\n", sm.GetNamespace(), sm.GetName())
+}
+
+var portnum int32 = 80
+
+func createService(client kubernetes.Interface) *corev1.Service {
+	sm := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "service",
+			Labels: map[string]string{
+				"ntcu-k8s": "hw3",
+			},
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{
+				"ntcu-k8s": "hw3",
+			},
+			Type: corev1.ServiceTypeNodePort,
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "http",
+					Port:       80,
+					TargetPort: intstr.IntOrString{IntVal: portnum},
+					NodePort:   30001,
+					Protocol:   corev1.ProtocolTCP,
+				},
+			},
+		},
+	}
+	sm.Namespace = namespace
+	sm, err := client.
+		CoreV1().
+		Services(namespace).Create(
+		context.Background(),
+		sm,
+		metav1.CreateOptions{},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("Created Deplyment %s/%s\n", sm.GetNamespace(), sm.GetName())
+	return sm
+}
+
+
+
+func GetConfigMap(client kubernetes.Interface, namespace, name string) (*corev1.ConfigMap, error) {
+	cm, err := client.
+		CoreV1().
+		ConfigMaps(namespace).
+		Get(
+			context.Background(),
+			name,
+			metav1.GetOptions{},
+		)
+	if err != nil {
+		return nil, err
+	}
+	return cm, nil
+}
+
+func CreateConfigMap(client kubernetes.Interface, namespace, name string) (*corev1.ConfigMap, error) {
+	cm := &corev1.ConfigMap{Data: map[string]string{"foo": "bar"}}
+	cm.Namespace = namespace
+	cm.Name = name
+
+	cm, err := client.
+		CoreV1().
+		ConfigMaps(namespace).
+		Create(
+			context.Background(),
+			cm,
+			metav1.CreateOptions{},
+		)
+	if err != nil {
+		return nil, err
+	}
+
+	return cm, nil
+}
+
+func DeleteConfigMap(client kubernetes.Interface, namespace, name string) error {
+	err := client.
+		CoreV1().
+		ConfigMaps(namespace).
+		Delete(
+			context.Background(),
+			name,
+			metav1.DeleteOptions{},
+		)
+
+	return err
 }
