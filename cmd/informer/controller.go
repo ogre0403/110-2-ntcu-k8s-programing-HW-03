@@ -148,7 +148,7 @@ func createDeployment(client kubernetes.Interface) *appv1.Deployment {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "createdeploy",
 			Labels: map[string]string{
-				"ntcu-k8s1": "hw3",
+				"ntcu-k8s": "hw3",
 			},
 		},
 		Spec: appv1.DeploymentSpec{
