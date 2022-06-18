@@ -1,3 +1,4 @@
+
 package main
 import (
     "context"
@@ -68,7 +69,7 @@ func main() {
 }
 func int32Ptr(i int32) *int32 { return &i }
 
-func GetService(client kubernetes.Interface, namespace, name string) (*corev1.Service, error){
+func getService(client kubernetes.Interface, namespace, name string) (*corev1.Service, error){
     cm, err := client.
             CoreV1().
             Services(namespace).
@@ -76,6 +77,7 @@ func GetService(client kubernetes.Interface, namespace, name string) (*corev1.Se
                   context.Background(),
                   name,
                   metav1.GetOptions{},
+            )
     if err != nil {
         return nil, err
     }
