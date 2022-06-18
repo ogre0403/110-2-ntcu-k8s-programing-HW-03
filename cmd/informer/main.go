@@ -1,4 +1,3 @@
-
 package main
 import (
     "context"
@@ -19,11 +18,11 @@ import (
 )
 var (
     namespace = "default"
+    clientset *kubernetes.Clientset
 )
 func main() {
     outsideCluster := flag.Bool("outside-cluster", false, "set to true when run out of cluster. (default: false)")
     flag.Parse()
-    var clientset *kubernetes.Clientset
     if *outsideCluster {
         // creates the out-cluster config
         home, err := os.UserHomeDir()
