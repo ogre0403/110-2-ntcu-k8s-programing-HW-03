@@ -15,7 +15,7 @@ spec:
       serviceAccountName: dm-incluster
       containers:
         - name: inclusterapp
-          image: acs107110/incluster:latest
+          image: acs107110/informer:latest
           imagePullPolicy: IfNotPresent
 ---
 apiVersion: v1
