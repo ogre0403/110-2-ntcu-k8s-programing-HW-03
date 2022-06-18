@@ -50,11 +50,31 @@ for i in {1..60}; do
   ready=`kubectl get deployments.apps ${deployment} >/dev/null  2>&1  && kubectl get deployments.apps ${deployment} -o yaml |  yq .status.readyReplicas==.status.replicas`
 
 	if [ "$ready" == "true" ]; then
-		echo "........ PASS"
-    exit 0
+	  break
 	fi
+
+  if [[ "$i" -eq 60 ]]; then
+    echo "timeout 120 sec. wait for create deployment ${deployment} success"
+    exit 1
+  fi
   sleep 2
 done
 
-echo "timeout 120 sec. wait for create deployment ${deployment} success"
-exit 1
+
+for i in {1..20}; do
+  sleep 1
+  deployment_num=`kubectl get deployments.apps  -o yaml | yq '.items | length'`
+
+  if [[ "$deployment_num" -eq 2 ]]; then
+      break
+  fi
+
+  if [[ "$i" -eq 20 ]]; then
+      echo "timeout: deployment總數 $deployment_num 不正確, 應為 2. informer程式不需建立Deployment"
+      exit 1
+  fi
+
+done
+
+
+echo "........ PASS"
