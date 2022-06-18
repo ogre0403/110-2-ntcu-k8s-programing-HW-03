@@ -50,10 +50,9 @@ func (c *DeploymentController) onDelete(obj interface{}) {
     job := obj.(*appv1.Deployment)
     if job.GetLabels()["ntcu-k8s"] == "hw3" {
     fmt.Printf("Informer event: Job DELETED %s/%s\n", job.GetNamespace(), job.GetName())
-        if err := deleteService(c.clientSet, c.svc); err == nil{
+            deleteService(c.clientSet, c.svc)
             deleteDeployment(c.clientSet, c.deployment)
-            fmt.Printf("----Delete Service when Job DELETE Event %s/%s\n", namespace, "test-service")
-        }
+            fmt.Printf("----Delete Service when Job DELETE Event %s/%s\n", c.svc.GetNamespace(), c.svc.GetName())
     }
 }
 // NewConfigMapController creates a ConfigMapController
