@@ -9,7 +9,7 @@ import (
     "path"
     "syscall"
     //"time"
-    appv1 "k8s.io/api/apps/v1"
+    //appv1 "k8s.io/api/apps/v1"
     corev1 "k8s.io/api/core/v1"
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "k8s.io/apimachinery/pkg/util/intstr"
@@ -78,13 +78,10 @@ func deleteService(client kubernetes.Interface, namespace, name string) error {
             name,
             metav1.DeleteOptions{},
         )
-    if err != nil {
-        panic(err.Error())
-    }
-    fmt.Printf("Deleted Service %s/%s\n", sm.GetNamespace(), sm.GetName())
+    return err
 }
 var portnum int32 = 80
-func createService(client kubernetes.Interface, namespace, name string) (*corev1.Service, err) {
+func createService(client kubernetes.Interface, namespace, name string) (*corev1.Service, error) {
     cm := &corev1.Service{
         ObjectMeta: metav1.ObjectMeta{
             Name: "cm-service",
