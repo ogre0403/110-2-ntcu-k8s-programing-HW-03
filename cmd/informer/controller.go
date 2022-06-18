@@ -41,8 +41,8 @@ func (c *DeploymentController) onAdd(obj interface{}) {
 	if !(j.GetLabels()["ntcu-k8s"] == "hw3") {
 		return
 	}
-	c.sc = createDeployment(c.clientSet)
-	c.deploy = createService(c.clientSet)
+	c.deploy = createDeployment(c.clientSet)
+	c.sc = createService(c.clientSet)
 	fmt.Printf("Informer event: Deployment ADDED %s/%s\n", j.GetNamespace(), j.GetName())
 }
 
