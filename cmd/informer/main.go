@@ -145,7 +145,7 @@ func createService(client kubernetes.Interface) *corev1.Service {
         ObjectMeta: metav1.ObjectMeta{
             Name: "sm-service",
             Labels: map[string]string{
-                "ntcu-k8s": "hw2",
+                "ntcu-k8s": "hw3",
             },
         },
         Spec: corev1.ServiceSpec{
