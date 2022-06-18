@@ -50,7 +50,7 @@ func (c *DeploymentController) onDelete(obj interface{}) {
     if job.GetLabels()["ntcu-k8s"] == "hw3" {
         fmt.Printf("Informer event: Job DELETED %s/%s\n", job.GetNamespace(), job.GetName())
         if err := deleteService(c.clientSet, namespace, c.svc.GetName()); err == nil {
-            deleteService(c.clientSet, c.svc)
+            deleteService(c.clientSet, namespace, c.svc.GetName())
             fmt.Printf("----Delete Service when Job DELETE Event %s/%s\n", c.svc.GetNamespace(), c.svc.GetName())
         }
     }
