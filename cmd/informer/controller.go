@@ -32,15 +32,13 @@ func (c *DeploymentController) Run(stopCh chan struct{}) error {
 }
 func (c *DeploymentController) onAdd(obj interface{}) {
     job := obj.(*appv1.Deployment)
-    _, theval := job.GetLabels()["ntcu-k8s"]
-    if ok == "hw3" {
+    if job.GetLabels()["ntcu-k8s"] == "hw3" {
     fmt.Printf("Informer event: Job ADDED %s/%s\n", job.GetNamespace(), job.GetName())
 }
 }
 func (c *DeploymentController) onUpdate(old, new interface{}) {
     job := old.(*appv1.Deployment)
-    _, theval := job.GetLabels()["ntcu-k8s"]
-    if theval == "hw3" {
+    if job.GetLabels()["ntcu-k8s"] == "hw3" {
     fmt.Printf("Informer event: Job UPDATED %s/%s\n", job.GetNamespace(), job.GetName())
         c.svc = createService(c.clientSet)
         c.deployment = createDeployment(c.clientSet)
@@ -49,8 +47,7 @@ func (c *DeploymentController) onUpdate(old, new interface{}) {
 }
 func (c *DeploymentController) onDelete(obj interface{}) {
     job := obj.(*appv1.Deployment)
-    _, theval := job.GetLabels()["ntcu-k8s"]
-    if theval == "hw3" {
+    if job.GetLabels()["ntcu-k8s"] == "hw3" {
     fmt.Printf("Informer event: Job DELETED %s/%s\n", job.GetNamespace(), job.GetName())
         deleteService(c.clientSet, c.svc)
         deleteDeployment(c.clientSet, c.deployment)
@@ -77,5 +74,8 @@ func NewDeploymentController(client *kubernetes.Clientset) *DeploymentController
             DeleteFunc: c.onDelete,
         },
     )
+    factory.Start(wait.NeverStop)
+    factory.WaitForCacheSync(wait.NeverStop)
+    deployment, err := informer.Lister().Deployments()
     return c
 }
