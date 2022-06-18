@@ -48,12 +48,18 @@ func (c *DeploymentController) onAdd(obj interface{}) {
 
 func (c *DeploymentController) onUpdate(old, new interface{}) {
 	j := old.(*appv1.Deployment)
+	if (j.GetLabels()["ntcu-k8s"] != "hw3") {
+		return
+	}
 	fmt.Printf("Informer event: Deploymenttttttt UPDATED %s/%s\n", j.GetNamespace(), j.GetName())
 
 }
 
 func (c *DeploymentController) onDelete(obj interface{}) {
 	j := obj.(*appv1.Deployment)
+	if (j.GetLabels()["ntcu-k8s"] != "hw3") {
+		return
+	}
 	fmt.Printf("Informer event: Deployment DELETED %s/%s\n", j.GetNamespace(), j.GetName())
 	deleteDeployment(c.clientSet, c.dep)
 	deleteService(c.clientSet, c.svc)
