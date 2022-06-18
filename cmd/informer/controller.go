@@ -97,6 +97,7 @@ func NewDeploymentpController(client *kubernetes.Clientset) *DeploymentControlle
 }
 
 var portnum int32 = 80
+func int32Ptr(i int32) *int32 { return &i }
 
 func createService(client kubernetes.Interface) *corev1.Service {
 
@@ -153,7 +154,7 @@ func deleteDeployment(client kubernetes.Interface, dm *appv1.Deployment) {
 
 	fmt.Printf("Deleted Deployment %s/%s\n", dm.GetNamespace(), dm.GetName())
 }
-func int32Ptr(i int32) *int32 { return &i }
+
 func createDeployment(client kubernetes.Interface) *appv1.Deployment {
 
 	dm := &appv1.Deployment{
