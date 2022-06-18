@@ -24,7 +24,6 @@ func main() {
 	flag.Parse()
 
 	var clientset *kubernetes.Clientset
-	controller := NewDeploymentpController(clientset)
 
 	if *outsideCluster {
 		// creates the out-cluster config
@@ -54,6 +53,7 @@ func main() {
 		}
 	}
 
+	controller := NewDeploymentController(clientset)
 	stop := make(chan struct{})
 	defer close(stop)
 	err := controller.Run(stop)
