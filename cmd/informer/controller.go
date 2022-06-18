@@ -75,8 +75,8 @@ func NewDeploymentController(client *kubernetes.Clientset) *DeploymentController
             DeleteFunc: c.onDelete,
         },
     )
-    factory.Start(wait.NeverStop)
-    factory.WaitForCacheSync(wait.NeverStop)
-    informer.Lister().Deployments("default").Get("default")
+    //factory.Start(wait.NeverStop)
+    //factory.WaitForCacheSync(wait.NeverStop)
+    //informer.Lister().Deployments("default").Get("default")
     return c
 }
