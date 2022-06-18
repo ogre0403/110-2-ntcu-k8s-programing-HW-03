@@ -23,7 +23,7 @@ var (
 func main() {
     outsideCluster := flag.Bool("outside-cluster", false, "set to true when run out of cluster. (default: false)")
     flag.Parse()
-    clientset := util.GetClientSet(*outsideCluster)
+    
     controller := NewDeploymentController(clientset)
     if *outsideCluster {
 		// creates the out-cluster config
