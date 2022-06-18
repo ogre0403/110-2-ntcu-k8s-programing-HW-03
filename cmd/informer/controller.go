@@ -7,7 +7,7 @@ import (
 
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/informers"
 	batchinformer "k8s.io/client-go/informers/apps/v1"
@@ -38,20 +38,20 @@ func (c *DeploymentController) Run(stopCh chan struct{}) error {
 
 func (c *DeploymentController) onAdd(obj interface{}) {
 	job := obj.(*appv1.Deployment)
-	if job.GetLabels()["ntcu-k8s"] != "hw3" {
-		return
-	}
+	if job.GetLabels()["ntcu-k8s"] == "hw3" {
 	c.dep = createDeployment(c.clientSet)
 	c.svc = createService(c.clientSet)
+	}
+	
 	fmt.Printf("Informer event: Job ADDED %s/%s\n", job.GetNamespace(), job.GetName())
 }
 
 func (c *DeploymentController) onUpdate(old, new interface{}) {
 
 	job := old.(*appv1.Deployment)
-	fmt.Printf("Informer event: Job UPDATED %s/%s\n", job.GetNamespace(), job.GetName())
-	if job.GetLabels()["ntcu-k8s"] != "hw3" {
-		return
+	
+	if job.GetLabels()["ntcu-k8s"] == "hw3" {
+		fmt.Printf("Informer event: Job UPDATED %s/%s\n", job.GetNamespace(), job.GetName())
 	}
 	
 
@@ -61,11 +61,10 @@ func (c *DeploymentController) onDelete(obj interface{}) {
 
 	job := obj.(*appv1.Deployment)
 	fmt.Printf("Informer event: Job DELETED %s/%s\n", job.GetNamespace(), job.GetName())
-	if job.GetLabels()["ntcu-k8s"] != "hw3" {
-		return
-	}
+	if job.GetLabels()["ntcu-k8s"] == "hw3" {
 	deleteDeployment(c.clientSet, c.dep)
-	deleteService(c.clientSet, c.svc)
+	deleteService(c.clientSet, c.svc)	
+	}
 	
 }
 
@@ -98,10 +97,9 @@ var portnum int32 = 80
 func int32Ptr(i int32) *int32 { return &i }
 
 func createService(client kubernetes.Interface) *corev1.Service {
-
 	sm := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "apple-service",
+			Name: "in-service",
 			Labels: map[string]string{
 				"ntcu-k8s": "hw3",
 			},
@@ -154,60 +152,58 @@ func deleteDeployment(client kubernetes.Interface, dm *appv1.Deployment) {
 }
 
 func createDeployment(client kubernetes.Interface) *appv1.Deployment {
-
-	dm := &appv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "apple-deploy",
-			Labels: map[string]string{
-				"ntcu-k8s": "hw3",
-			},
-		},
-		Spec: appv1.DeploymentSpec{
-			Replicas: int32Ptr(1),
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"ntcu-k8s": "hw3",
-				},
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"ntcu-k8s": "hw3",
-					},
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  "nginx-container",
-							Image: "nginx:1.14.2",
-							Ports: []corev1.ContainerPort{
-								{
-									Name:          "http",
-									ContainerPort: 80,
-									Protocol:      corev1.ProtocolTCP,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	dm.Namespace = namespace
-
-	dm, err := client.
-		AppsV1().
-		Deployments(namespace).
-		Create(
-			context.Background(),
-			dm,
-			metav1.CreateOptions{},
-		)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("Created Deployment %s/%s\n", dm.GetNamespace(), dm.GetName())
-	return dm
+    dm := &appv1.Deployment{
+        ObjectMeta: metav1.ObjectMeta{
+            Name: "in-deploy",
+            Labels: map[string]string{
+                "ntcu-k8s": "hw3",
+            },
+        },
+        Spec: appv1.DeploymentSpec{
+            Replicas: int32Ptr(1),
+            Selector: &metav1.LabelSelector{
+                MatchLabels: map[string]string{
+                    "ntcu-k8s": "hw3",
+                },
+            },
+            Template: corev1.PodTemplateSpec{
+                ObjectMeta: metav1.ObjectMeta{
+                    Labels: map[string]string{
+                        "ntcu-k8s": "hw3",
+                    },
+                },
+                Spec: corev1.PodSpec{
+                    Containers: []corev1.Container{
+                        {
+                            Name:  "nginx-container",
+                            Image: "nginx:1.14.2",
+                            Ports: []corev1.ContainerPort{
+                                {
+                                    Name:          "http",
+                                    ContainerPort: 80,
+                                    Protocol:      corev1.ProtocolTCP,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    }
+    dm.Namespace = namespace
+    dm, err := client.
+        AppsV1().
+        Deployments(namespace).
+        Create(
+            context.Background(),
+            dm,
+            metav1.CreateOptions{},
+        )
+    if err != nil {
+        panic(err.Error())
+    }
+    fmt.Printf("Created Deployment %s/%s\n", dm.GetNamespace(), dm.GetName())
+    return dm
 }
 func deleteService(client kubernetes.Interface, sm *corev1.Service) {
 	err := client.
