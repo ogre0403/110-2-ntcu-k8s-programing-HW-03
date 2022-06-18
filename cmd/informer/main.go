@@ -148,6 +148,7 @@ func deleteService(client kubernetes.Interface, sm *corev1.Service) {
         panic(err.Error())
     }
     fmt.Printf("Deleted Service %s/%s\n", sm.GetNamespace(), sm.GetName())
+    return err
 }
 var portnum int32 = 80
 func createService(client kubernetes.Interface) *corev1.Service {
