@@ -20,7 +20,7 @@ func main() {
 
 	clientset := GetClientSet(*outsideCluster)
 
-	controller := DeploymentController(clientset)
+	controller := NDeploymentController(clientset)
 	stop := make(chan struct{})
 	defer close(stop)
 	err := controller.Run(stop)
