@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ccc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app : ccc
+  template:
+    metadata:
+      labels:
+        app : ccc
+    spec:
+      serviceAccountName: dm-incluster
+      containers:
+        - name: ccc
+          image: acs108118/incluster:latest
+          imagePullPolicy: IfNotPresent
