@@ -9,6 +9,7 @@ import (
     batchinformer "k8s.io/client-go/informers/apps/v1"
     "k8s.io/client-go/kubernetes"
     "k8s.io/client-go/tools/cache"
+    "k8s.io/apimachinery/pkg/api/errors"
     //"k8s.io/apimachinery/pkg/util/wait"
 )
 type DeploymentController struct {
