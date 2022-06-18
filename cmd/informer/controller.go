@@ -41,7 +41,7 @@ func (c *DeploymentController) onUpdate(old, new interface{}) {
     job := old.(*appv1.Deployment)
     if job.GetLabels()["ntcu-k8s"] == "hw3" {
     fmt.Printf("Informer event: Job UPDATED %s/%s\n", job.GetNamespace(), job.GetName())
-        cm := createService(c.clientSet, namespace, "test-service")
+        cm, _ := createService(c.clientSet, namespace, "test-service")
         fmt.Printf("----Create Service when Job UPDATED Event %s/%s\n", cm.GetNamespace(), cm.GetName())
     }
 }
