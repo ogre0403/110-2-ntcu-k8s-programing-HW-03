@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	namespace = "dafault"
+	namespace = "default"
 )
 
 func main() {
