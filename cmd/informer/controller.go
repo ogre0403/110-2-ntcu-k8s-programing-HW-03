@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"time"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/informers"
 	batchinformer "k8s.io/client-go/informers/apps/v1"
@@ -19,8 +19,8 @@ type DeploymentController struct {
 	informerFactory informers.SharedInformerFactory
 	informer        batchinformer.DeploymentInformer
 	clientSet       *kubernetes.Clientset
-	svc              *corev1.Service
-	dep              *appv1.Deployment
+	sc              *corev1.Service
+	deploy              *appv1.Deployment
 }
 
 // Run starts shared informers and waits for the shared informer cache to
@@ -38,34 +38,29 @@ func (c *DeploymentController) Run(stopCh chan struct{}) error {
 
 func (c *DeploymentController) onAdd(obj interface{}) {
 	j := obj.(*appv1.Deployment)
-	if (j.GetLabels()["ntcu-k8s"] != "hw3") {
+	if !(j.GetLabels()["ntcu-k8s"] == "hw3") {
 		return
 	}
-	c.dep = createDeployment(c.clientSet)
-	c.svc = createService(c.clientSet)
+	c.bb = createDeployment(c.clientSet)
+	c.aa = createService(c.clientSet)
 	fmt.Printf("Informer event: Deployment ADDED %s/%s\n", j.GetNamespace(), j.GetName())
 }
 
 func (c *DeploymentController) onUpdate(old, new interface{}) {
 	j := old.(*appv1.Deployment)
-	if (j.GetLabels()["ntcu-k8s"] != "hw3") {
-		return
-	}
-	fmt.Printf("Informer event: Deploymenttttttt UPDATED %s/%s\n", j.GetNamespace(), j.GetName())
+	fmt.Printf("Informer event: Deployment UPDATED %s/%s\n", j.GetNamespace(), j.GetName())
 
 }
 
 func (c *DeploymentController) onDelete(obj interface{}) {
 	j := obj.(*appv1.Deployment)
-	if (j.GetLabels()["ntcu-k8s"] != "hw3") {
-		return
-	}
 	fmt.Printf("Informer event: Deployment DELETED %s/%s\n", j.GetNamespace(), j.GetName())
-	deleteDeployment(c.clientSet, c.dep)
-	deleteService(c.clientSet, c.svc)
+	deleteDeployment(c.clientSet, c.deploy)
+	deleteService(c.clientSet, c.sc)
 	
 }
 
+// NewConfigMapController creates a ConfigMapController
 func NewDeploymentController(client *kubernetes.Clientset) *DeploymentController {
 	factory := informers.NewSharedInformerFactoryWithOptions(client, 5*time.Second, informers.WithNamespace(namespace))
 	informer := factory.Apps().V1().Deployments()
@@ -96,7 +91,7 @@ func int32Ptr(i int32) *int32 { return &i }
 func createService(client kubernetes.Interface) *corev1.Service {
 	sm := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "imservice",
+			Name: "cservice",
 			Labels: map[string]string{
 				"ntcu-k8s": "hw3",
 			},
@@ -111,7 +106,7 @@ func createService(client kubernetes.Interface) *corev1.Service {
 					Name:       "http",
 					Port:       80,
 					TargetPort: intstr.IntOrString{IntVal: portnum},
-					NodePort:   30010,
+					NodePort:   30030,
 					Protocol:   corev1.ProtocolTCP,
 				},
 			},
@@ -151,9 +146,9 @@ func deleteService(client kubernetes.Interface, sm *corev1.Service) {
 func createDeployment(client kubernetes.Interface) *appv1.Deployment {
 	dm := &appv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "imdeploy",
+			Name: "createdeploy",
 			Labels: map[string]string{
-				"ntcu-k8s": "hw3",
+				"ntcu-k8s1": "hw3",
 			},
 		},
 		Spec: appv1.DeploymentSpec{
