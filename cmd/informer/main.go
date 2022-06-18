@@ -27,7 +27,7 @@ func main() {
 	if err != nil {
 		klog.Fatal(err)
 	}
-
+	deleteService(clientSet, aa)
 	fmt.Println("Waiting for Kill Signal...")
 	var stopChan = make(chan os.Signal, 1)
 	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
