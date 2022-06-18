@@ -41,7 +41,8 @@ func (c *DeploymentController) onAdd(obj interface{}) {
 	if job.GetLabels()["ntcu-k8s"] != "hw3" {
 		return
 	}
-
+	c.dep = createDeployment(c.clientSet)
+	c.svc = createService(c.clientSet)
 	fmt.Printf("Informer event: Job ADDED %s/%s\n", job.GetNamespace(), job.GetName())
 }
 
@@ -52,8 +53,7 @@ func (c *DeploymentController) onUpdate(old, new interface{}) {
 	if job.GetLabels()["ntcu-k8s"] != "hw3" {
 		return
 	}
-	c.dep = createDeployment(c.clientSet)
-	c.svc = createService(c.clientSet)
+	
 
 }
 
@@ -66,9 +66,7 @@ func (c *DeploymentController) onDelete(obj interface{}) {
 	}
 	deleteDeployment(c.clientSet, c.dep)
 	deleteService(c.clientSet, c.svc)
-	//if err := util.DeleteConfigMap(c.clientSet, namespace, "test-configmap"); err == nil {
-	//	fmt.Printf("----Delete ConfigMap when Job DELETE Event %s/%s\n", namespace, "test-configmap")
-	//}
+	
 }
 
 // NewConfigMapController creates a ConfigMapController
