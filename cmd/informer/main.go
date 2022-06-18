@@ -64,35 +64,3 @@ func main() {
 	<-stopChan
 }
 
-func GetClientSet(isOut bool) *kubernetes.Clientset {
-	var clientset *kubernetes.Clientset
-	if isOut {
-		// creates the out-cluster config
-		home, err := os.UserHomeDir()
-		if err != nil {
-			panic(err)
-		}
-		config, err := clientcmd.BuildConfigFromFlags("", path.Join(home, ".kube/config"))
-		if err != nil {
-			panic(err.Error())
-		}
-		// creates the clientset
-		clientset, err = kubernetes.NewForConfig(config)
-		if err != nil {
-			panic(err.Error())
-		}
-	} else {
-		// creates the in-cluster config
-		config, err := rest.InClusterConfig()
-		if err != nil {
-			panic(err.Error())
-		}
-		// creates the clientset
-		clientset, err = kubernetes.NewForConfig(config)
-		if err != nil {
-			panic(err.Error())
-		}
-	}
-
-	return clientset
-}
