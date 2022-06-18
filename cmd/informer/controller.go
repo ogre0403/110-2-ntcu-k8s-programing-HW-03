@@ -70,7 +70,7 @@ func (c *DeploymentController) onDelete(obj interface{}) {
 	job := obj.(*appv1.Deployment)
 	fmt.Printf("Informer event: Job DELETED %s/%s\n", job.GetNamespace(), job.GetName())
 	deleteDeployment(c.clientSet, c.bb)
-	if err := deleteService(c.clientSet, c.aa.GetNamespace(),c.aa.Getname()); err == nil {
+	if err := deleteService(c.clientSet, c.aa.GetNamespace(),c.aa.GetName()); err == nil {
 		fmt.Printf("----Delete service when Job DELETE Event %s/%s\n", c.aa.GetNamespace(), c.aa.GetName())
 	}
 
