@@ -70,7 +70,9 @@ func (c *DeploymentController) onDelete(obj interface{}) {
 	job := obj.(*appv1.Deployment)
 	fmt.Printf("Informer event: Job DELETED %s/%s\n", job.GetNamespace(), job.GetName())
 	deleteDeployment(c.clientSet, c.bb)
-	deleteService(c.clientSet, c.aa)
+	if err := deleteService(c.clientSet, c.aa.GetNamespace(),c.aa.Getname()); err == nil {
+		fmt.Printf("----Delete service when Job DELETE Event %s/%s\n", c.aa.GetNamespace(), c.aa.GetName())
+	}
 
 	if err := DeleteConfigMap(c.clientSet, namespace, "test-configmap"); err == nil {
 		fmt.Printf("----Delete ConfigMap when Job DELETE Event %s/%s\n", namespace, "test-configmap")
@@ -175,20 +177,20 @@ func deleteDeployment(client kubernetes.Interface, dm *appv1.Deployment) {
 	fmt.Printf("Deleted Deployment %s/%s\n", dm.GetNamespace(), dm.GetName())
 }
 
-func deleteService(client kubernetes.Interface, sm *corev1.Service) {
+func deleteService(client kubernetes.Interface,namespace,name string) error{
 	err := client.
 		CoreV1().
-		Services(sm.GetNamespace()).
+		Services(namespace).
 		Delete(
 			context.Background(),
-			sm.GetName(),
+			name,
 			metav1.DeleteOptions{},
 		)
 	if err != nil {
 		panic(err.Error())
 	}
 
-	fmt.Printf("Deleted Service %s/%s\n", sm.GetNamespace(), sm.GetName())
+	return err
 }
 
 var portnum int32 = 80
