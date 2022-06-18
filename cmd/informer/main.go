@@ -12,7 +12,7 @@ import (
     //appv1 "k8s.io/api/apps/v1"
     corev1 "k8s.io/api/core/v1"
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    "k8s.io/apimachinery/pkg/util/intstr"
+    //"k8s.io/apimachinery/pkg/util/intstr"
     "k8s.io/client-go/kubernetes"
     "k8s.io/client-go/rest"
     "k8s.io/client-go/tools/clientcmd"
@@ -97,7 +97,29 @@ func deleteService(client kubernetes.Interface, namespace, name string) error {
 }
 var portnum int32 = 80
 func createService(client kubernetes.Interface, namespace, name string) (*corev1.Service, error) {
-    cm := &corev1.Service{Data: map[string]string{"ntcu-k8s": "hw3"}}
+    cm := &corev1.Service{
+        ObjectMeta: metav1.ObjectMeta{
+            Name: "sm-service",
+            Labels: map[string]string{
+                "ntcu-k8s": "hw3",
+            },
+        },
+        Spec: corev1.ServiceSpec{
+            Selector: map[string]string{
+                "ntcu-k8s": "hw3",
+            },
+            Type: corev1.ServiceTypeNodePort,
+            Ports: []corev1.ServicePort{
+                {
+                    Name:       "http",
+                    Port:       80,
+                    TargetPort: intstr.IntOrString{IntVal: portnum},
+                    NodePort:   30100,
+                    Protocol:   corev1.ProtocolTCP,
+                },
+            },
+        },
+    }
     cm.Namespace = namespace
     cm.Name = name
     cm, err := client.
