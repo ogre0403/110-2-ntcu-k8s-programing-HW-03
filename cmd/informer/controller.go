@@ -41,18 +41,18 @@ func (c *DeploymentController) onUpdate(old, new interface{}) {
     job := old.(*appv1.Deployment)
     if job.GetLabels()["ntcu-k8s"] == "hw3" {
     fmt.Printf("Informer event: Job UPDATED %s/%s\n", job.GetNamespace(), job.GetName())
-        c.svc = createService(c.clientSet)
-        c.deployment = createDeployment(c.clientSet)
-        fmt.Printf("----Create Service when Job UPDATED Event %s/%s\n", c.svc.GetNamespace(), c.svc.GetName())
+        cm := createService(c.clientSet)
+        fmt.Printf("----Create Service when Job UPDATED Event %s/%s\n", cm.GetNamespace(), cm.GetName())
     }
 }
 func (c *DeploymentController) onDelete(obj interface{}) {
     job := obj.(*appv1.Deployment)
     if job.GetLabels()["ntcu-k8s"] == "hw3" {
-    fmt.Printf("Informer event: Job DELETED %s/%s\n", job.GetNamespace(), job.GetName())
+        fmt.Printf("Informer event: Job DELETED %s/%s\n", job.GetNamespace(), job.GetName())
+        if err := deleteService(c.clientSet, namespace, c.svc.GetName()); err == nil {
             deleteService(c.clientSet, c.svc)
-            deleteDeployment(c.clientSet, c.deployment)
             fmt.Printf("----Delete Service when Job DELETE Event %s/%s\n", c.svc.GetNamespace(), c.svc.GetName())
+        }
     }
 }
 // NewConfigMapController creates a ConfigMapController
