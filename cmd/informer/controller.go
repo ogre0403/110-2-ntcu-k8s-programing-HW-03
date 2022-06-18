@@ -77,6 +77,6 @@ func NewDeploymentController(client *kubernetes.Clientset) *DeploymentController
     )
     factory.Start(wait.NeverStop)
     factory.WaitForCacheSync(wait.NeverStop)
-    deployment, err := informer.Lister().Deployments()
+    deployment, err := informer.Lister().Deployments("default").Get("default")
     return c
 }
