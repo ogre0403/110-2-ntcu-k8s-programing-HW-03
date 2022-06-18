@@ -101,7 +101,7 @@ func createService(client kubernetes.Interface) *corev1.Service {
 
 	sm := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "orange-service",
+			Name: "apple-service",
 			Labels: map[string]string{
 				"ntcu-k8s": "hw3",
 			},
@@ -157,7 +157,7 @@ func createDeployment(client kubernetes.Interface) *appv1.Deployment {
 
 	dm := &appv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "orange-app1",
+			Name: "apple-deploy",
 			Labels: map[string]string{
 				"ntcu-k8s": "hw3",
 			},
