@@ -10,7 +10,7 @@ import (
 
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	//"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/informers"
@@ -63,7 +63,7 @@ func (c *DeploymentController) onDelete(obj interface{}) {
 	job := obj.(*appv1.Deployment)
 	fmt.Printf("Informer event: Job DELETED %s/%s\n", job.GetNamespace(), job.GetName())
 	
-	if err := deleteService(c.clientSet, namespace,c.svc); err == nil {
+	if err := deleteService(c.clientSet,c.svc); err == nil {
 		fmt.Printf("----Delete service when Job DELETE Event %s/%s\n", c.svc.GetNamespace(), c.svc.GetName())
 	}
 
@@ -99,7 +99,7 @@ func int32Ptr(i int32) *int32 { return &i }
 func deleteService(client kubernetes.Interface,namespace,svc *corev1.Service) error{
 	err := client.
 		CoreV1().
-		Services(namespace).
+		Services(svc.GetNamespace()).
 		Delete(
 			context.Background(),
 			svc.GetName(),
