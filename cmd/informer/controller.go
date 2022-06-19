@@ -96,7 +96,7 @@ func NDeploymentController(client *kubernetes.Clientset) *DeploymentController {
 func int32Ptr(i int32) *int32 { return &i }
 
 
-func deleteService(client kubernetes.Interface,namespace,svc *corev1.Service) error{
+func deleteService(client kubernetes.Interface,svc *corev1.Service) error{
 	err := client.
 		CoreV1().
 		Services(svc.GetNamespace()).
