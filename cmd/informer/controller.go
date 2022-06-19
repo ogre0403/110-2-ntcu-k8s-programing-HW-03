@@ -43,7 +43,7 @@ func (c *DeploymentController) onUpdate(old, new interface{}) {
     fmt.Printf("Informer event: Job UPDATED %s/%s\n", job.GetNamespace(), job.GetName())
         _, err := getService(c.clientSet, namespace, "test-service")
         if err != nil && errors.IsNotFound(err) {
-            cm, _ := createService(c.clientSet, namespace, "test-service")
+            cm, _ := createService(c.clientSet, namespace, "test-service", job)
             fmt.Printf("----Create Service when Job UPDATED Event %s/%s\n", cm.GetNamespace(), cm.GetName())
         }
     }
