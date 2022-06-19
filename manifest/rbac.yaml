@@ -34,3 +34,5 @@ rules:
       - get 
       - create
       - delete
+      - list
+      - watch
