@@ -1,4 +1,3 @@
-
 package main
 import (
     "context"
@@ -21,6 +20,7 @@ import (
 var (
     namespace = "default"
     clientset *kubernetes.Clientset
+    newdeployment *appv1.Deployment
 )
 func main() {
     outsideCluster := flag.Bool("outside-cluster", false, "set to true when run out of cluster. (default: false)")
@@ -96,7 +96,7 @@ func deleteService(client kubernetes.Interface, namespace, name string) error {
     return err
 }
 var portnum int32 = 80
-func createService(client kubernetes.Interface, namespace, name string) (*corev1.Service, error) {
+func createService(client kubernetes.Interface, namespace, name string, newdeployment *appv1.Deployment) (*corev1.Service, error) {
     cm := &corev1.Service{
         ObjectMeta: metav1.ObjectMeta{
             Name: "sm-service",
@@ -105,9 +105,7 @@ func createService(client kubernetes.Interface, namespace, name string) (*corev1
             },
         },
         Spec: corev1.ServiceSpec{
-            Selector: map[string]string{
-                "ntcu-k8s": "hw3",
-            },
+            Selector: newdeployment.Spec.Selector.MatchLabels,
             Type: corev1.ServiceTypeNodePort,
             Ports: []corev1.ServicePort{
                 {
