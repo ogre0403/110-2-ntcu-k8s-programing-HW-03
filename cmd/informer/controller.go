@@ -10,7 +10,7 @@ import (
 
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	//"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/informers"
@@ -21,24 +21,18 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-type ConfigMapController struct {
+type DeploymentController struct {
 	informerFactory informers.SharedInformerFactory
 	informer        appsinformer.DeploymentInformer
 	clientSet       *kubernetes.Clientset
-	aa              *corev1.Service
-	bb              *appv1.Deployment
+	svc              *corev1.Service
+	dep              *appv1.Deployment
 }
 
 var clientSet *kubernetes.Clientset
 
-//var aa *corev1.Service
-//var bb *appv1.Deployment
 
-var name string
-
-// Run starts shared informers and waits for the shared informer cache to
-// synchronize.
-func (c *ConfigMapController) Run(stopCh chan struct{}) error {
+func (c *DeploymentController) Run(stopCh chan struct{}) error {
 	// Starts all the shared informers that have been created by the factory so
 	// far.
 	c.informerFactory.Start(stopCh)
@@ -49,47 +43,38 @@ func (c *ConfigMapController) Run(stopCh chan struct{}) error {
 	return nil
 }
 
-func (c *ConfigMapController) onAdd(obj interface{}) {
+func (c *DeploymentController) onAdd(obj interface{}) {
 	job := obj.(*appv1.Deployment)
 	if !(job.GetLabels()["ntcu-k8s"] == "hw3") {
 		return
 	}
-
-	//c.bb = createDeployment(c.clientSet)
-	c.aa = createService(c.clientSet, job)
+	c.svc = createService(c.clientSet,job)
 	fmt.Printf("Informer event: Job ADDED %s/%s\n", job.GetNamespace(), job.GetName())
 
 }
 
-func (c *ConfigMapController) onUpdate(old, new interface{}) {
+func (c *DeploymentController) onUpdate(old, new interface{}) {
 	job := old.(*appv1.Deployment)
 	fmt.Printf("Informer event: Job UPDATED %s/%s\n", job.GetNamespace(), job.GetName())
 
-	_, err := GetConfigMap(c.clientSet, namespace, "test-configmap")
-	if err != nil && errors.IsNotFound(err) {
-		cm, _ := CreateConfigMap(c.clientSet, namespace, "test-configmap")
-		fmt.Printf("----Create ConfigMap when Job UPDATED Event %s/%s\n", cm.GetNamespace(), cm.GetName())
-	}
-
 }
 
-func (c *ConfigMapController) onDelete(obj interface{}) {
+func (c *DeploymentController) onDelete(obj interface{}) {
 	job := obj.(*appv1.Deployment)
 	fmt.Printf("Informer event: Job DELETED %s/%s\n", job.GetNamespace(), job.GetName())
-	//deleteDeployment(c.clientSet, c.bb)
-	deleteService(c.clientSet, c.aa)
 
-	if err := DeleteConfigMap(c.clientSet, namespace, "test-configmap"); err == nil {
-		fmt.Printf("----Delete ConfigMap when Job DELETE Event %s/%s\n", namespace, "test-configmap")
+	if err := deleteService(c.clientSet,c.svc); err == nil {
+		fmt.Printf("----Delete service when Job DELETE Event %s/%s\n", c.svc.GetNamespace(), c.svc.GetName())
 	}
+
 }
 
-// NewConfigMapController creates a ConfigMapController
-func NewConfigMapController(client *kubernetes.Clientset) *ConfigMapController {
+
+func NDeploymentController(client *kubernetes.Clientset) *DeploymentController {
 	factory := informers.NewSharedInformerFactoryWithOptions(client, 5*time.Second, informers.WithNamespace(namespace))
 	informer := factory.Apps().V1().Deployments()
 
-	c := &ConfigMapController{
+	c := &DeploymentController{
 		informerFactory: factory,
 		informer:        informer,
 		clientSet:       client,
@@ -110,41 +95,42 @@ func NewConfigMapController(client *kubernetes.Clientset) *ConfigMapController {
 
 func int32Ptr(i int32) *int32 { return &i }
 
-func deleteService(client kubernetes.Interface, sm *corev1.Service) {
+
+func deleteService(client kubernetes.Interface,svc *corev1.Service) error{
 	err := client.
 		CoreV1().
-		Services(sm.GetNamespace()).
+		Services(svc.GetNamespace()).
 		Delete(
 			context.Background(),
-			sm.GetName(),
+			svc.GetName(),
 			metav1.DeleteOptions{},
 		)
 	if err != nil {
 		panic(err.Error())
 	}
 
-	fmt.Printf("Deleted Service %s/%s\n", sm.GetNamespace(), sm.GetName())
+	return err
 }
 
 var portnum int32 = 80
 
-func createService(client kubernetes.Interface, aa *appv1.Deployment) *corev1.Service {
+func createService(client kubernetes.Interface, dep *appv1.Deployment) *corev1.Service {
 	sm := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "apple-service",
+			Name: "service",
 			Labels: map[string]string{
 				"ntcu-k8s": "hw3",
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: aa.Spec.Selector.MatchLabels,
-			Type:     corev1.ServiceTypeNodePort,
+			Selector: dep.Spec.Selector.MatchLabels,
+			Type: corev1.ServiceTypeNodePort,
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "http",
 					Port:       80,
 					TargetPort: intstr.IntOrString{IntVal: portnum},
-					NodePort:   30001,
+					NodePort:   30100,
 					Protocol:   corev1.ProtocolTCP,
 				},
 			},
@@ -153,17 +139,20 @@ func createService(client kubernetes.Interface, aa *appv1.Deployment) *corev1.Se
 	sm.Namespace = namespace
 	sm, err := client.
 		CoreV1().
-		Services(namespace).Create(
-		context.Background(),
-		sm,
-		metav1.CreateOptions{},
-	)
+		Services(namespace).
+		Create(
+			context.Background(),
+			sm,
+			metav1.CreateOptions{},
+		)
 	if err != nil {
 		panic(err.Error())
 	}
 	fmt.Printf("Created Deplyment %s/%s\n", sm.GetNamespace(), sm.GetName())
 	return sm
 }
+
+
 
 func GetClientSet(isOut bool) *kubernetes.Clientset {
 	var clientset *kubernetes.Clientset
@@ -196,52 +185,4 @@ func GetClientSet(isOut bool) *kubernetes.Clientset {
 	}
 
 	return clientset
-}
-
-func GetConfigMap(client kubernetes.Interface, namespace, name string) (*corev1.ConfigMap, error) {
-	cm, err := client.
-		CoreV1().
-		ConfigMaps(namespace).
-		Get(
-			context.Background(),
-			name,
-			metav1.GetOptions{},
-		)
-	if err != nil {
-		return nil, err
-	}
-	return cm, nil
-}
-
-func CreateConfigMap(client kubernetes.Interface, namespace, name string) (*corev1.ConfigMap, error) {
-	cm := &corev1.ConfigMap{Data: map[string]string{"foo": "bar"}}
-	cm.Namespace = namespace
-	cm.Name = name
-
-	cm, err := client.
-		CoreV1().
-		ConfigMaps(namespace).
-		Create(
-			context.Background(),
-			cm,
-			metav1.CreateOptions{},
-		)
-	if err != nil {
-		return nil, err
-	}
-
-	return cm, nil
-}
-
-func DeleteConfigMap(client kubernetes.Interface, namespace, name string) error {
-	err := client.
-		CoreV1().
-		ConfigMaps(namespace).
-		Delete(
-			context.Background(),
-			name,
-			metav1.DeleteOptions{},
-		)
-
-	return err
 }
