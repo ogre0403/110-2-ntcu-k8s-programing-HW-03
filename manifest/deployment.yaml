@@ -6,14 +6,14 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app : newapps
+      ntuc-k8s: hw3
   template:
     metadata:
       labels:
-        app : newapps
+        ntuc-k8s: hw3
     spec:
       serviceAccountName: dm-incluster
       containers:
         - name: newapps
           image: acs107120/incluster:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: IfNotPresent           
