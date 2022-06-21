@@ -2,36 +2,30 @@ package main
 
 import (
 	"context"
+
 	"fmt"
 	"time"
 
-	"os"
-	"path"
-
-	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	//"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/informers"
-	appsinformer "k8s.io/client-go/informers/apps/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
+
+	appv1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/informers"
+	deploymentinformer "k8s.io/client-go/informers/apps/v1"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 type DeploymentController struct {
 	informerFactory informers.SharedInformerFactory
-	informer        appsinformer.DeploymentInformer
+	informer        deploymentinformer.DeploymentInformer
 	clientSet       *kubernetes.Clientset
-	svc              *corev1.Service
-	dep              *appv1.Deployment
 }
 
-var clientSet *kubernetes.Clientset
-
-
+// Run starts shared informers and waits for the shared informer cache to
+// synchronize.
 func (c *DeploymentController) Run(stopCh chan struct{}) error {
 	// Starts all the shared informers that have been created by the factory so
 	// far.
@@ -44,33 +38,45 @@ func (c *DeploymentController) Run(stopCh chan struct{}) error {
 }
 
 func (c *DeploymentController) onAdd(obj interface{}) {
-	job := obj.(*appv1.Deployment)
-	if !(job.GetLabels()["ntcu-k8s"] == "hw3") {
+	deployment := obj.(*appv1.Deployment)
+
+	if !(deployment.GetLabels()["ntcu-k8s"] == "hw3") {
 		return
 	}
-	c.svc = createService(c.clientSet,job)
-	fmt.Printf("Informer event: Job ADDED %s/%s\n", job.GetNamespace(), job.GetName())
 
+	CreateServices(c.clientSet, namespace, "apple-service", deployment)
+	fmt.Printf("Informer event: Deployment ADDED %s/%s\n", deployment.GetNamespace(), deployment.GetName())
 }
 
 func (c *DeploymentController) onUpdate(old, new interface{}) {
-	job := old.(*appv1.Deployment)
-	fmt.Printf("Informer event: Job UPDATED %s/%s\n", job.GetNamespace(), job.GetName())
+	deployment := old.(*appv1.Deployment)
 
+	if !(deployment.GetLabels()["ntcu-k8s"] == "hw3") {
+		return
+	}
+	fmt.Printf("Informer event: Deployment UPDATED %s/%s\n", deployment.GetNamespace(), deployment.GetName())
+
+	_, err := GetService(c.clientSet, namespace, "apple-service")
+	if err != nil && errors.IsNotFound(err) {
+		cm, _ := CreateServices(c.clientSet, namespace, "apple-service", deployment)
+		fmt.Printf("----Create Service when Deployment UPDATED Event %s/%s\n", cm.GetNamespace(), cm.GetName())
+	}
 }
 
 func (c *DeploymentController) onDelete(obj interface{}) {
-	job := obj.(*appv1.Deployment)
-	fmt.Printf("Informer event: Job DELETED %s/%s\n", job.GetNamespace(), job.GetName())
-
-	if err := deleteService(c.clientSet,c.svc); err == nil {
-		fmt.Printf("----Delete service when Job DELETE Event %s/%s\n", c.svc.GetNamespace(), c.svc.GetName())
+	deployment := obj.(*appv1.Deployment)
+	if !(deployment.GetLabels()["ntcu-k8s"] == "hw3") {
+		return
 	}
+	fmt.Printf("Informer event: Deployment DELETED %s/%s\n", deployment.GetNamespace(), deployment.GetName())
 
+	if err := DeleteService(c.clientSet, namespace, "apple-service"); err == nil {
+		fmt.Printf("----Delete Service when Deployment DELETE Event %s/%s\n", namespace, "apple-service")
+	}
 }
 
-
-func NDeploymentController(client *kubernetes.Clientset) *DeploymentController {
+// NewConfigMapController creates a ConfigMapController
+func NewDeploymentController(client *kubernetes.Clientset) *DeploymentController {
 	factory := informers.NewSharedInformerFactoryWithOptions(client, 5*time.Second, informers.WithNamespace(namespace))
 	informer := factory.Apps().V1().Deployments()
 
@@ -93,38 +99,34 @@ func NDeploymentController(client *kubernetes.Clientset) *DeploymentController {
 	return c
 }
 
-func int32Ptr(i int32) *int32 { return &i }
-
-
-func deleteService(client kubernetes.Interface,svc *corev1.Service) error{
-	err := client.
+func GetService(client kubernetes.Interface, namespace, name string) (*corev1.Service, error) {
+	cm, err := client.
 		CoreV1().
-		Services(svc.GetNamespace()).
-		Delete(
+		Services(namespace).
+		Get(
 			context.Background(),
-			svc.GetName(),
-			metav1.DeleteOptions{},
+			name,
+			metav1.GetOptions{},
 		)
 	if err != nil {
-		panic(err.Error())
+		return nil, err
 	}
-
-	return err
+	return cm, nil
 }
 
 var portnum int32 = 80
 
-func createService(client kubernetes.Interface, dep *appv1.Deployment) *corev1.Service {
+func CreateServices(client kubernetes.Interface, namespace, name string, deployment *appv1.Deployment) (*corev1.Service, error) {
 	sm := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "service",
+			Name: name,
 			Labels: map[string]string{
 				"ntcu-k8s": "hw3",
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: dep.Spec.Selector.MatchLabels,
-			Type: corev1.ServiceTypeNodePort,
+			Selector: deployment.Spec.Selector.MatchLabels,
+			Type:     corev1.ServiceTypeNodePort,
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "http",
@@ -148,41 +150,17 @@ func createService(client kubernetes.Interface, dep *appv1.Deployment) *corev1.S
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("Created Deplyment %s/%s\n", sm.GetNamespace(), sm.GetName())
-	return sm
+	return sm, nil
 }
 
-
-
-func GetClientSet(isOut bool) *kubernetes.Clientset {
-	var clientset *kubernetes.Clientset
-	if isOut {
-		// creates the out-cluster config
-		home, err := os.UserHomeDir()
-		if err != nil {
-			panic(err)
-		}
-		config, err := clientcmd.BuildConfigFromFlags("", path.Join(home, ".kube/config"))
-		if err != nil {
-			panic(err.Error())
-		}
-		// creates the clientset
-		clientset, err = kubernetes.NewForConfig(config)
-		if err != nil {
-			panic(err.Error())
-		}
-	} else {
-		// creates the in-cluster config
-		config, err := rest.InClusterConfig()
-		if err != nil {
-			panic(err.Error())
-		}
-		// creates the clientset
-		clientset, err = kubernetes.NewForConfig(config)
-		if err != nil {
-			panic(err.Error())
-		}
-	}
-
-	return clientset
-}
+func DeleteService(client kubernetes.Interface, namespace, name string) error {
+	err := client.
+		CoreV1().
+		Services(namespace).
+		Delete(
+			context.Background(),
+			name,
+			metav1.DeleteOptions{},
+		)
+	return err
+} 
