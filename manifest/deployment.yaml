@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: in-cluster-example
+  name: apple-a
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: in-cluster-example
+      app : apple-a
   template:
     metadata:
       labels:
-        app: in-cluster-example
+        app : apple-a
     spec:
-      serviceAccountName: cm-incluster
+      serviceAccountName: dm-incluster
       containers:
-        - name: in-cluster-example
-          image: ogre0403/incluster:latest
+        - name: apple-a
+          image: acs107144/incluster:latest
           imagePullPolicy: IfNotPresent
