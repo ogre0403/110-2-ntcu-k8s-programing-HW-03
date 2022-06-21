@@ -3,11 +3,17 @@ package main
 import (
 	"flag"
 	"fmt"
-	"gitlab.com/ogre0403/110-2-ntcu-k8s-programing/pkg/util"
-	"k8s.io/klog/v2"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"path"
+
+	"k8s.io/klog/v2"
+
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 var (
@@ -18,9 +24,9 @@ func main() {
 	outsideCluster := flag.Bool("outside-cluster", false, "set to true when run out of cluster. (default: false)")
 	flag.Parse()
 
-	clientset := util.GetClientSet(*outsideCluster)
+	clientset := GetClientSet(*outsideCluster)
 
-	controller := NewConfigMapController(clientset)
+	controller := NewDeploymentController(clientset)
 	stop := make(chan struct{})
 	defer close(stop)
 	err := controller.Run(stop)
@@ -32,4 +38,36 @@ func main() {
 	var stopChan = make(chan os.Signal, 1)
 	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 	<-stopChan
+}
+
+func GetClientSet(isOut bool) *kubernetes.Clientset {
+	var clientset *kubernetes.Clientset
+	if isOut {
+		// creates the out-cluster config
+		home, err := os.UserHomeDir()
+		if err != nil {
+			panic(err)
+		}
+		config, err := clientcmd.BuildConfigFromFlags("", path.Join(home, ".kube/config"))
+		if err != nil {
+			panic(err.Error())
+		}
+		// creates the clientset
+		clientset, err = kubernetes.NewForConfig(config)
+		if err != nil {
+			panic(err.Error())
+		}
+	} else {
+		// creates the in-cluster config
+		config, err := rest.InClusterConfig()
+		if err != nil {
+			panic(err.Error())
+		}
+		// creates the clientset
+		clientset, err = kubernetes.NewForConfig(config)
+		if err != nil {
+			panic(err.Error())
+		}
+	}
+	return clientset
 }
