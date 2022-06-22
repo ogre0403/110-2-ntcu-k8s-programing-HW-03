@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-nginx
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      serviceAccountName: dm-informer
+      containers:
+        - name: nginx
+          image: acs107802/informer:latest
+          imagePullPolicy: IfNotPresent
