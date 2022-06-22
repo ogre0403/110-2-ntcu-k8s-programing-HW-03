@@ -45,25 +45,31 @@ func (c *ServiceController) onAdd(obj interface{}) {
 	if !(dmc.GetLabels()["ntcu-k8s"] == "hw3") {
 		return
 	}
-	_, err := GetService(c.clientSet, namespace, "ntcu-nginx")
-	if err != nil && errors.IsNotFound(err) {
-		dm, _ := CreateService(c.clientSet, namespace, "ntcu-nginx")
-		fmt.Printf("----Create Service when Job UPDATED Event %s/%s\n", dm.GetNamespace(), dm.GetName())
-	}
-	fmt.Printf("Informer event: Job ADDED %s/%s\n", dmc.GetNamespace(), dmc.GetName())
+	fmt.Printf("Informer event: Deployment ADDED %s/%s\n", dmc.GetNamespace(), dmc.GetName())
 }
 
 func (c *ServiceController) onUpdate(old, new interface{}) {
 	dmc := old.(*appv1.Deployment)
-	fmt.Printf("Informer event: Job UPDATED %s/%s\n", dmc.GetNamespace(), dmc.GetName())
+	if !(dmc.GetLabels()["ntcu-k8s"] == "hw3") {
+		return
+	}
+	_, err := GetService(c.clientSet, namespace, "ntcu-nginx")
+	if err != nil && errors.IsNotFound(err) {
+		dm, _ := CreateService(c.clientSet, namespace, "ntcu-nginx")
+		fmt.Printf("----Create Service when Deployment UPDATED Event %s/%s\n", dm.GetNamespace(), dm.GetName())
+	}
+	fmt.Printf("Informer event: Deployment UPDATED %s/%s\n", dmc.GetNamespace(), dmc.GetName())
 }
 
 func (c *ServiceController) onDelete(obj interface{}) {
 	dmc := obj.(*appv1.Deployment)
-	fmt.Printf("Informer event: Job DELETED %s/%s\n", dmc.GetNamespace(), dmc.GetName())
+	if !(dmc.GetLabels()["ntcu-k8s"] == "hw3") {
+		return
+	}
+	fmt.Printf("Informer event: Deployment DELETED %s/%s\n", dmc.GetNamespace(), dmc.GetName())
 
 	if err := DeleteService(c.clientSet, namespace, "ntcu-nginx"); err == nil {
-		fmt.Printf("----Delete Service when Job DELETE Event %s/%s\n", namespace, "ntcu-nginx")
+		fmt.Printf("----Delete Service when Deployment DELETE Event %s/%s\n", namespace, "ntcu-nginx")
 	}
 }
 
