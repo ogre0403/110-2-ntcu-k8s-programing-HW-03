@@ -3,7 +3,7 @@ WORKDIR /workspace
 COPY go.mod go.mod
 COPY go.sum go.sum
 RUN  go mod download
-COPY /cmd /cmd
+COPY cmd/ cmd/
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o main ./cmd/informer
 
 FROM gcr.io/distroless/static:nonroot
