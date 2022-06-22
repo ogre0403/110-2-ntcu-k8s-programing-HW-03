@@ -160,14 +160,14 @@ func CreateService(client kubernetes.Interface, namespace, name string) (*corev1
 					Name:       "http",
 					Port:       80,
 					TargetPort: intstr.IntOrString{IntVal: portnum},
-					NodePort:   30100,
+					NodePort:   30080,
 					Protocol:   corev1.ProtocolTCP,
 				},
 			},
 		},
 	}
 	sm.Namespace = namespace
-	//sm.Name = name
+	sm.Name = name
 
 	sm, err := client.
 		CoreV1().
