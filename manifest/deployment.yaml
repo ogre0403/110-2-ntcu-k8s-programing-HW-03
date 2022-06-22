@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: isapps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app : isapps
+  template:
+    metadata:
+      labels:
+        app : isapps
+    spec:
+      serviceAccountName: dm-incluster
+      containers:
+        - name: isapps
+          image: zi-ling-li/incluster:latest
+          imagePullPolicy: IfNotPresent
