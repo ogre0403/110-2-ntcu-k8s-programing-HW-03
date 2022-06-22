@@ -23,8 +23,6 @@ type ServiceController struct {
 	informerFactory informers.SharedInformerFactory
 	informer        batchinformer.DeploymentInformer
 	clientSet       *kubernetes.Clientset
-	svc 			*corev1.Service
-	dpm				*appv1.Deployment
 }
 
 // Run starts shared informers and waits for the shared informer cache to
@@ -45,6 +43,7 @@ func (c *ServiceController) onAdd(obj interface{}) {
 	if !(dmc.GetLabels()["ntcu-k8s"] == "hw3") {
 		return
 	}
+	CreateService(c.clientSet, namespace, "ntcu-nginx", dmc)
 	fmt.Printf("Informer event: Deployment ADDED %s/%s\n", dmc.GetNamespace(), dmc.GetName())
 }
 
@@ -55,7 +54,7 @@ func (c *ServiceController) onUpdate(old, new interface{}) {
 	}
 	_, err := GetService(c.clientSet, namespace, "ntcu-nginx")
 	if err != nil && errors.IsNotFound(err) {
-		dm, _ := CreateService(c.clientSet, namespace, "ntcu-nginx")
+		dm, _ := CreateService(c.clientSet, namespace, "ntcu-nginx", dmc)
 		fmt.Printf("----Create Service when Deployment UPDATED Event %s/%s\n", dm.GetNamespace(), dm.GetName())
 	}
 	fmt.Printf("Informer event: Deployment UPDATED %s/%s\n", dmc.GetNamespace(), dmc.GetName())
@@ -148,32 +147,32 @@ func GetService(client kubernetes.Interface, namespace, name string) (*corev1.Se
 	return sm, nil
 }
 
-func CreateService(client kubernetes.Interface, namespace, name string) (*corev1.Service, error) {
+func CreateService(client kubernetes.Interface, namespace, name string, deployment *appv1.Deployment) (*corev1.Service, error) {
 	sm := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "ntcu-nginx",
+			Name: name,
 			Labels: map[string]string{
 				"ntcu-k8s": "hw3",
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: map[string]string{
+			Selector: deployment.Spec.Selector.MatchLabels,
+			/*Selector: map[string]string{
 				"ntcu-k8s": "hw3",
-			},
+			},*/
 			Type: corev1.ServiceTypeNodePort,
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "http",
 					Port:       80,
 					TargetPort: intstr.IntOrString{IntVal: portnum},
-					NodePort:   30080,
+					NodePort:   30100,
 					Protocol:   corev1.ProtocolTCP,
 				},
 			},
 		},
 	}
 	sm.Namespace = namespace
-	sm.Name = name
 
 	sm, err := client.
 		CoreV1().
