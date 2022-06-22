@@ -36,5 +36,5 @@ rules:
       - get 
       - create
       - delete
-	- watch
-	- list
+      - watch
+      - list
