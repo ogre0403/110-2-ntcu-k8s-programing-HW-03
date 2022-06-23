@@ -2,31 +2,43 @@ package main
 
 import (
 	"context"
-
 	"fmt"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/kubernetes"
+	"os"
+	"path"
 
 	appv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/informers"
-	deploymentinformer "k8s.io/client-go/informers/apps/v1"
+	appsinformer "k8s.io/client-go/informers/apps/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
-type DeploymentController struct {
+type ConfigMapController struct {
 	informerFactory informers.SharedInformerFactory
-	informer        deploymentinformer.DeploymentInformer
+	informer        appsinformer.DeploymentInformer
 	clientSet       *kubernetes.Clientset
+	aa              *corev1.Service
+	bb              *appv1.Deployment
 }
+
+var clientSet *kubernetes.Clientset
+
+//var aa *corev1.Service
+//var bb *appv1.Deployment
+
+var name string
 
 // Run starts shared informers and waits for the shared informer cache to
 // synchronize.
-func (c *DeploymentController) Run(stopCh chan struct{}) error {
+func (c *ConfigMapController) Run(stopCh chan struct{}) error {
 	// Starts all the shared informers that have been created by the factory so
 	// far.
 	c.informerFactory.Start(stopCh)
@@ -37,50 +49,47 @@ func (c *DeploymentController) Run(stopCh chan struct{}) error {
 	return nil
 }
 
-func (c *DeploymentController) onAdd(obj interface{}) {
-	deployment := obj.(*appv1.Deployment)
-
-	if !(deployment.GetLabels()["ntcu-k8s"] == "hw3") {
+func (c *ConfigMapController) onAdd(obj interface{}) {
+	job := obj.(*appv1.Deployment)
+	if !(job.GetLabels()["ntcu-k8s"] == "hw3") {
 		return
 	}
 
-	CreateServices(c.clientSet, namespace, "apple-service", deployment)
-	fmt.Printf("Informer event: Deployment ADDED %s/%s\n", deployment.GetNamespace(), deployment.GetName())
+	//c.bb = createDeployment(c.clientSet)
+	c.aa = createService(c.clientSet, job)
+	fmt.Printf("Informer event: Job ADDED %s/%s\n", job.GetNamespace(), job.GetName())
+
 }
 
-func (c *DeploymentController) onUpdate(old, new interface{}) {
-	deployment := old.(*appv1.Deployment)
+func (c *ConfigMapController) onUpdate(old, new interface{}) {
+	job := old.(*appv1.Deployment)
+	fmt.Printf("Informer event: Job UPDATED %s/%s\n", job.GetNamespace(), job.GetName())
 
-	if !(deployment.GetLabels()["ntcu-k8s"] == "hw3") {
-		return
-	}
-	fmt.Printf("Informer event: Deployment UPDATED %s/%s\n", deployment.GetNamespace(), deployment.GetName())
-
-	_, err := GetService(c.clientSet, namespace, "apple-service")
+	_, err := GetConfigMap(c.clientSet, namespace, "test-configmap")
 	if err != nil && errors.IsNotFound(err) {
-		cm, _ := CreateServices(c.clientSet, namespace, "apple-service", deployment)
-		fmt.Printf("----Create Service when Deployment UPDATED Event %s/%s\n", cm.GetNamespace(), cm.GetName())
+		cm, _ := CreateConfigMap(c.clientSet, namespace, "test-configmap")
+		fmt.Printf("----Create ConfigMap when Job UPDATED Event %s/%s\n", cm.GetNamespace(), cm.GetName())
 	}
+
 }
 
-func (c *DeploymentController) onDelete(obj interface{}) {
-	deployment := obj.(*appv1.Deployment)
-	if !(deployment.GetLabels()["ntcu-k8s"] == "hw3") {
-		return
-	}
-	fmt.Printf("Informer event: Deployment DELETED %s/%s\n", deployment.GetNamespace(), deployment.GetName())
+func (c *ConfigMapController) onDelete(obj interface{}) {
+	job := obj.(*appv1.Deployment)
+	fmt.Printf("Informer event: Job DELETED %s/%s\n", job.GetNamespace(), job.GetName())
+	//deleteDeployment(c.clientSet, c.bb)
+	deleteService(c.clientSet, c.aa)
 
-	if err := DeleteService(c.clientSet, namespace, "apple-service"); err == nil {
-		fmt.Printf("----Delete Service when Deployment DELETE Event %s/%s\n", namespace, "apple-service")
+	if err := DeleteConfigMap(c.clientSet, namespace, "test-configmap"); err == nil {
+		fmt.Printf("----Delete ConfigMap when Job DELETE Event %s/%s\n", namespace, "test-configmap")
 	}
 }
 
 // NewConfigMapController creates a ConfigMapController
-func NewDeploymentController(client *kubernetes.Clientset) *DeploymentController {
+func NewConfigMapController(client *kubernetes.Clientset) *ConfigMapController {
 	factory := informers.NewSharedInformerFactoryWithOptions(client, 5*time.Second, informers.WithNamespace(namespace))
 	informer := factory.Apps().V1().Deployments()
 
-	c := &DeploymentController{
+	c := &ConfigMapController{
 		informerFactory: factory,
 		informer:        informer,
 		clientSet:       client,
@@ -99,10 +108,100 @@ func NewDeploymentController(client *kubernetes.Clientset) *DeploymentController
 	return c
 }
 
-func GetService(client kubernetes.Interface, namespace, name string) (*corev1.Service, error) {
+func int32Ptr(i int32) *int32 { return &i }
+
+func deleteService(client kubernetes.Interface, sm *corev1.Service) {
+	err := client.
+		CoreV1().
+		Services(sm.GetNamespace()).
+		Delete(
+			context.Background(),
+			sm.GetName(),
+			metav1.DeleteOptions{},
+		)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	fmt.Printf("Deleted Service %s/%s\n", sm.GetNamespace(), sm.GetName())
+}
+
+var portnum int32 = 80
+
+func createService(client kubernetes.Interface, aa *appv1.Deployment) *corev1.Service {
+	sm := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "apple-service",
+			Labels: map[string]string{
+				"ntcu-k8s": "hw3",
+			},
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: aa.Spec.Selector.MatchLabels,
+			Type:     corev1.ServiceTypeNodePort,
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "http",
+					Port:       80,
+					TargetPort: intstr.IntOrString{IntVal: portnum},
+					NodePort:   30001,
+					Protocol:   corev1.ProtocolTCP,
+				},
+			},
+		},
+	}
+	sm.Namespace = namespace
+	sm, err := client.
+		CoreV1().
+		Services(namespace).Create(
+		context.Background(),
+		sm,
+		metav1.CreateOptions{},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("Created Deplyment %s/%s\n", sm.GetNamespace(), sm.GetName())
+	return sm
+}
+
+func GetClientSet(isOut bool) *kubernetes.Clientset {
+	var clientset *kubernetes.Clientset
+	if isOut {
+		// creates the out-cluster config
+		home, err := os.UserHomeDir()
+		if err != nil {
+			panic(err)
+		}
+		config, err := clientcmd.BuildConfigFromFlags("", path.Join(home, ".kube/config"))
+		if err != nil {
+			panic(err.Error())
+		}
+		// creates the clientset
+		clientset, err = kubernetes.NewForConfig(config)
+		if err != nil {
+			panic(err.Error())
+		}
+	} else {
+		// creates the in-cluster config
+		config, err := rest.InClusterConfig()
+		if err != nil {
+			panic(err.Error())
+		}
+		// creates the clientset
+		clientset, err = kubernetes.NewForConfig(config)
+		if err != nil {
+			panic(err.Error())
+		}
+	}
+
+	return clientset
+}
+
+func GetConfigMap(client kubernetes.Interface, namespace, name string) (*corev1.ConfigMap, error) {
 	cm, err := client.
 		CoreV1().
-		Services(namespace).
+		ConfigMaps(namespace).
 		Get(
 			context.Background(),
 			name,
@@ -114,53 +213,35 @@ func GetService(client kubernetes.Interface, namespace, name string) (*corev1.Se
 	return cm, nil
 }
 
-var portnum int32 = 80
+func CreateConfigMap(client kubernetes.Interface, namespace, name string) (*corev1.ConfigMap, error) {
+	cm := &corev1.ConfigMap{Data: map[string]string{"foo": "bar"}}
+	cm.Namespace = namespace
+	cm.Name = name
 
-func CreateServices(client kubernetes.Interface, namespace, name string, deployment *appv1.Deployment) (*corev1.Service, error) {
-	sm := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{
-				"ntcu-k8s": "hw3",
-			},
-		},
-		Spec: corev1.ServiceSpec{
-			Selector: deployment.Spec.Selector.MatchLabels,
-			Type:     corev1.ServiceTypeNodePort,
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "http",
-					Port:       80,
-					TargetPort: intstr.IntOrString{IntVal: portnum},
-					NodePort:   30100,
-					Protocol:   corev1.ProtocolTCP,
-				},
-			},
-		},
-	}
-	sm.Namespace = namespace
-	sm, err := client.
+	cm, err := client.
 		CoreV1().
-		Services(namespace).
+		ConfigMaps(namespace).
 		Create(
 			context.Background(),
-			sm,
+			cm,
 			metav1.CreateOptions{},
 		)
 	if err != nil {
-		panic(err.Error())
+		return nil, err
 	}
-	return sm, nil
+
+	return cm, nil
 }
 
-func DeleteService(client kubernetes.Interface, namespace, name string) error {
+func DeleteConfigMap(client kubernetes.Interface, namespace, name string) error {
 	err := client.
 		CoreV1().
-		Services(namespace).
+		ConfigMaps(namespace).
 		Delete(
 			context.Background(),
 			name,
 			metav1.DeleteOptions{},
 		)
+
 	return err
 }
