@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: newapps
+  name: isapps
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app : newapps
+      app : isapps
   template:
     metadata:
       labels:
-        app : newapps
+        app : isapps
     spec:
       serviceAccountName: dm-incluster
       containers:
-        - name: newapps
+        - name: isapps
           image: acs107133/incluster:latest
           imagePullPolicy: IfNotPresent 
