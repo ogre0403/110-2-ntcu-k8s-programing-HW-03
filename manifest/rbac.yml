@@ -28,11 +28,11 @@ rules:
       - "apps"
       - ""
     resources:
-      - "services"
-      - "deployments"
+      - services
+      - deployments
     verbs:
-      - "get"
-      - "create"
-      - "delete"
-      - "list"
-      - "watch"
+      - get
+      - create
+      - delete
+      - list
+      - watch
