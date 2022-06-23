@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: apple-apps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      ntuc-k8s: hw3
+  template:
+    metadata:
+      labels:
+        ntuc-k8s: hw3
+    spec:
+      serviceAccountName: dm-incluster
+      containers:
+        - name: apple-apps
+          image: acs107133/incluster:latest
+          imagePullPolicy: IfNotPresent           
